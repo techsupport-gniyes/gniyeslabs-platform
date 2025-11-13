@@ -1,0 +1,294 @@
+// GniyesLabs Platform Prisma Schema
+// Multi-tenant SaaS platform with modular architecture
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// PLATFORM SCHEMA - Core tenant, user, and billing management
+// ============================================================================
+
+enum TenantStatus {
+  active
+  suspended
+  cancelled
+  grace_period
+}
+
+enum PlanTier {
+  tier1  // 1-500 members - $99/month
+  tier2  // 501-2,000 members - $249/month
+  tier3  // 2,001-5,000 members - $499/month
+  tier4  // 5,001+ members - $799/month
+}
+
+enum UserRole {
+  super_admin
+  tenant_admin
+  module_admin
+  member
+}
+
+enum ModuleStatus {
+  active
+  provisioning
+  deactivating
+  deactivated
+}
+
+model Tenant {
+  id                   String       @id @default(uuid())
+  name                 String
+  slug                 String       @unique
+  status               TenantStatus @default(active)
+  planTier             PlanTier     @default(tier1)
+  memberLimit          Int
+  currentMemberCount   Int          @default(0)
+  stripeCustomerId     String?      @unique
+  stripeSubscriptionId String?      @unique
+  customDomain         String?      @unique
+
+  // Relationships
+  users                User[]
+  modules              TenantModule[]
+  billingHistory       BillingHistory[]
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@map("tenants")
+  @@schema("platform")
+}
+
+model User {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  email                String
+  passwordHash         String
+  firstName            String
+  lastName             String
+  role                 UserRole     @default(member)
+  isActive             Boolean      @default(true)
+  emailVerified        Boolean      @default(false)
+  lastLoginAt          DateTime?
+
+  // Relationships
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens        RefreshToken[]
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([tenantId, email])
+  @@map("users")
+  @@schema("platform")
+}
+
+model RefreshToken {
+  id                   String       @id @default(uuid())
+  userId               String
+  token                String       @unique
+  expiresAt            DateTime
+  isRevoked            Boolean      @default(false)
+
+  // Relationships
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime     @default(now())
+
+  @@map("refresh_tokens")
+  @@schema("platform")
+}
+
+model TenantModule {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  moduleCode           String       // 'imembergenie', 'ieventgenie', etc.
+  status               ModuleStatus @default(provisioning)
+  activatedAt          DateTime?
+  deactivatedAt        DateTime?
+  monthlyPrice         Int          // Price in cents (e.g., 4900 for $49)
+
+  // AI Quota Management
+  aiQuotaLimit         Int          @default(50)
+  aiQuotaUsed          Int          @default(0)
+  quotaResetAt         DateTime     @default(now())
+
+  // Relationships
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([tenantId, moduleCode])
+  @@map("tenant_modules")
+  @@schema("platform")
+}
+
+model BillingHistory {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  amount               Int          // Amount in cents
+  currency             String       @default("usd")
+  status               String       // 'succeeded', 'pending', 'failed'
+  stripeInvoiceId      String?
+  stripePaymentIntentId String?
+  description          String?
+
+  // Relationships
+  tenant               Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime     @default(now())
+
+  @@map("billing_history")
+  @@schema("platform")
+}
+
+// ============================================================================
+// IMEMBERGENIE SCHEMA - Membership management module
+// ============================================================================
+
+enum MembershipStatus {
+  active
+  expired
+  suspended
+  cancelled
+}
+
+model MembershipType {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  name                 String
+  description          String?
+  annualFee            Int?         // Fee in cents
+
+  // Relationships
+  memberships          Membership[]
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([tenantId, name])
+  @@map("membership_types")
+  @@schema("imembergenie")
+}
+
+model Membership {
+  id                   String           @id @default(uuid())
+  tenantId             String
+  userId               String?          // Links to platform.users if member has portal access
+
+  // Member Information
+  firstName            String
+  lastName             String
+  email                String
+  phone                String?
+  memberNumber         String?
+
+  // Membership Details
+  typeId               String?
+  status               MembershipStatus @default(active)
+  joinDate             DateTime
+  expirationDate       DateTime?
+
+  // Custom Fields (JSON)
+  customFields         Json?
+
+  // Relationships
+  type                 MembershipType?  @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  paymentHistory       MemberPayment[]
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, memberNumber])
+  @@map("memberships")
+  @@schema("imembergenie")
+}
+
+model MemberPayment {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  membershipId         String
+  amount               Int          // Amount in cents
+  currency             String       @default("usd")
+  paymentType          String       // 'membership_fee', 'event_registration', etc.
+  status               String       // 'succeeded', 'pending', 'failed'
+  stripePaymentIntentId String?
+
+  // Relationships
+  membership           Membership   @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime     @default(now())
+
+  @@map("member_payments")
+  @@schema("imembergenie")
+}
+
+// ============================================================================
+// IEVENTGENIE SCHEMA - Event management module
+// ============================================================================
+
+enum EventStatus {
+  draft
+  published
+  ongoing
+  completed
+  cancelled
+}
+
+model Event {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  title                String
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  location             String?
+  maxAttendees         Int?
+  status               EventStatus  @default(draft)
+
+  // Relationships
+  registrations        EventRegistration[]
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@map("events")
+  @@schema("ieventgenie")
+}
+
+model EventRegistration {
+  id                   String       @id @default(uuid())
+  tenantId             String
+  eventId              String
+  membershipId         String?      // Optional link to membership
+
+  // Attendee Information
+  firstName            String
+  lastName             String
+  email                String
+  phone                String?
+
+  // Registration Details
+  registrationDate     DateTime     @default(now())
+  status               String       @default("confirmed") // 'confirmed', 'cancelled', 'waitlist'
+
+  // Relationships
+  event                Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@unique([tenantId, eventId, email])
+  @@map("event_registrations")
+  @@schema("ieventgenie")
+}
