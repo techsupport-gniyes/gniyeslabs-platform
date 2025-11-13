@@ -24,7 +24,7 @@
 ## Development Principles
 
 ### 1. ALWAYS Use Skills Proactively
-The project has 32 Claude Code skills installed. **You MUST use them proactively** - don't wait to be asked.
+The project has 33 Claude Code skills installed (32 domain-specific + 1 workflow skill). **You MUST use them proactively** - don't wait to be asked.
 
 ### 2. Security First
 - Never commit secrets (.env files are gitignored)
@@ -50,6 +50,63 @@ The project has 32 Claude Code skills installed. **You MUST use them proactively
 - Unit tests for business logic
 - Integration tests for APIs
 - E2E tests for user flows
+
+## Superpowers Workflow System (META-SKILL)
+
+**THE MOST IMPORTANT SKILL** - Use this to orchestrate all other skills and development workflows.
+
+### Slash Commands (Use These Extensively!)
+
+**`/superpowers:brainstorm`** - Interactive design refinement
+- Use BEFORE starting any complex feature
+- Socratic questioning to explore design options
+- Helps identify edge cases and requirements
+- **Example:** `/superpowers:brainstorm` multi-tenancy middleware design
+
+**`/superpowers:write-plan`** - Detailed implementation planning
+- Use AFTER brainstorming, BEFORE coding
+- Creates step-by-step implementation plan with quality gates
+- Includes verification steps and rollback procedures
+- **Example:** `/superpowers:write-plan` JWT authentication with refresh tokens
+
+**`/superpowers:execute-plan`** - Batch execution with verification
+- Use to execute the plan created by write-plan
+- Automatic quality checks at each step
+- Stops on failures for review
+- **Example:** `/superpowers:execute-plan` (after write-plan)
+
+### Automatic Skills (Activate Contextually)
+
+**TDD Workflow:**
+- RED-GREEN-REFACTOR cycle enforcement
+- Async testing patterns (condition-based waiting)
+- Anti-pattern detection
+
+**Systematic Debugging:**
+- 4-phase root cause process (Observe → Hypothesize → Test → Verify)
+- Evidence-based verification before claiming "fixed"
+- Defense-in-depth validation
+
+**Collaboration Patterns:**
+- Parallel agent coordination
+- Code review workflows
+- Git worktree management
+
+### When to Use Superpowers
+
+**ALWAYS for complex features:**
+1. Run `/superpowers:brainstorm` to explore the problem
+2. Run `/superpowers:write-plan` to create detailed plan
+3. Review the plan with user if needed
+4. Run `/superpowers:execute-plan` to implement with quality gates
+
+**ALWAYS for debugging:**
+- Let superpowers guide 4-phase systematic debugging
+- Don't guess - follow evidence-based approach
+
+**ALWAYS for TDD:**
+- Let superpowers enforce RED-GREEN-REFACTOR discipline
+- Write failing test first, no exceptions
 
 ## Installed Skills & When to Use Them
 
@@ -301,32 +358,42 @@ Currently configured MCP servers:
 
 ### Before Starting Any Feature
 
-1. **Read relevant documentation:**
+1. **Brainstorm with Superpowers:**
+   - Run `/superpowers:brainstorm` for complex features
+   - Explore design options, edge cases, requirements
+   - Get clarity before planning
+
+2. **Create Implementation Plan:**
+   - Run `/superpowers:write-plan` to create detailed step-by-step plan
+   - Review plan quality gates and verification steps
+   - Adjust if needed before execution
+
+3. **Read relevant documentation:**
    - `/docs/Master_Plan.md` - Check timeline
    - `/docs/Platform_Vision_Document.md` - Technical details
 
-2. **Use TodoWrite tool:**
-   - Break down feature into tasks
+4. **Use TodoWrite tool:**
+   - Break down feature into tasks (based on plan)
    - Track progress continuously
-
-3. **Invoke appropriate skill:**
-   - Don't implement directly - use skills first
-   - Get architecture/design guidance
 
 ### During Feature Development
 
-1. **Use TDD workflow:**
-   - Invoke `tdd-workflows:tdd-orchestrator` skill
-   - Write tests first (red)
-   - Implement feature (green)
-   - Refactor (refactor)
+1. **Execute with Superpowers:**
+   - Run `/superpowers:execute-plan` to implement with quality gates
+   - Superpowers automatically enforces TDD (RED-GREEN-REFACTOR)
+   - Stops on failures for review
 
-2. **Security checks:**
+2. **Use domain-specific skills:**
+   - Invoke relevant skills (backend, security, database, etc.)
+   - Get expert guidance for specific challenges
+   - Examples: `backend-api-security:backend-security-coder` for auth
+
+3. **Security checks:**
    - Run `security-compliance:security-auditor` after implementation
    - Validate all inputs
    - Test tenant isolation
 
-3. **Code review:**
+4. **Code review:**
    - Invoke `code-review-ai:code-reviewer` before committing
    - Address all findings
 
@@ -395,23 +462,29 @@ npm run build                 # Build for production
 
 ## Next Steps (Week 1)
 
-### Immediate Tasks (Use Skills!)
+### Immediate Tasks (Use Superpowers + Skills!)
 
 1. **Multi-tenancy Middleware**
-   - Skill: `backend-development:architecture-patterns`
-   - Skill: `backend-api-security:backend-security-coder`
+   - `/superpowers:brainstorm` multi-tenancy middleware design
+   - `/superpowers:write-plan` tenant context implementation
+   - `/superpowers:execute-plan` with TDD
+   - Skills: `backend-development:architecture-patterns`, `backend-api-security:backend-security-coder`
 
 2. **JWT Authentication**
-   - Skill: `backend-api-security:backend-security-coder`
-   - Skill: `javascript-typescript:nodejs-backend-patterns`
+   - `/superpowers:brainstorm` JWT + refresh token strategy
+   - `/superpowers:write-plan` authentication module
+   - `/superpowers:execute-plan` with security checks
+   - Skills: `backend-api-security:backend-security-coder`, `javascript-typescript:nodejs-backend-patterns`
 
 3. **RBAC Authorization**
-   - Skill: `backend-development:api-design-principles`
-   - Skill: `security-compliance:security-auditor`
+   - `/superpowers:brainstorm` 4-role permission system
+   - `/superpowers:write-plan` RBAC guards and decorators
+   - `/superpowers:execute-plan` with isolation tests
+   - Skills: `backend-development:api-design-principles`, `security-compliance:security-auditor`
 
 4. **Test Infrastructure**
-   - Skill: `unit-testing:test-automator`
-   - Skill: `tdd-workflows:tdd-orchestrator`
+   - `/superpowers:write-plan` Jest + testing framework setup
+   - Skills: `unit-testing:test-automator`, `tdd-workflows:tdd-orchestrator`
 
 ## Emergency Contacts & Resources
 
@@ -422,8 +495,10 @@ npm run build                 # Build for production
 
 ## Remember
 
+✅ **ALWAYS use Superpowers workflow** - brainstorm → plan → execute
 ✅ **ALWAYS use skills proactively** - they contain expert knowledge
 ✅ **ALWAYS use TodoWrite** to track complex tasks
+✅ **ALWAYS enforce TDD** - RED-GREEN-REFACTOR (superpowers does this)
 ✅ **ALWAYS test tenant isolation** - critical for multi-tenancy
 ✅ **NEVER commit secrets** - use .env files
 ✅ **ALWAYS validate inputs** - security first
